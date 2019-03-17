@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from pathlib inport Path
+"""Classes for S3 Buckets."""
+
+from pathlib import Path
 import mimetypes
 
 from botocore.exceptions import ClientError
 
-""" Classes for S3 Buckets """
 
 class BucketManager:
     """Manage an S3 Bucket."""
@@ -16,19 +17,19 @@ class BucketManager:
         self.s3 = self.session.resource('s3')
 
     def all_buckets(self):
-        """Get an iterator for all buckets"""
+        """Get an iterator for all buckets."""
         return self.s3.buckets.all()
 
     def all_objects(self, bucket):
-        """Get an iterator for all objects in the bucket"""
+        """Get an iterator for all objects in the bucket."""
         return self.s3.Bucket(bucket).all_objects
 
-    def init_bucket(self, bucket_name):
-        """Create a new S3 web bucket"""
+    def init_bucket(self, bucket):
+        """Create a new S3 web bucket."""
         s3_bucket = None
         try:
             s3_bucket = self.s3.create_bucket(
-                Bucket=bucket_name,
+                Bucket=bucket,
                 CreateBucketConfiguration={
                     'LocationConstraint': self.session.region_name
                 }
@@ -41,7 +42,9 @@ class BucketManager:
 
         return s3_bucket
 
-    def set_policy(self, bucket_name):
+    @staticmethod
+    def set_policy(bucket):
+        """Set bucket policy to be readable by everyone."""
         policy = """
         {
           "Version":"2012-10-17",
@@ -58,12 +61,14 @@ class BucketManager:
         """ % bucket.name
         policy = policy.strip()
 
-        pol = self.s3.Policy()
+        print("bucket variable :", bucket, "  ", bucket.name)
+
+        pol = bucket.Policy()
         pol.put(Policy=policy)
 
-
-    def configure_website(self, bucket_name):
-        """S3 website config for bucket"""
+    @staticmethod
+    def configure_website(bucket):
+        """S3 website config for bucket."""
         bucket.Website().put(WebsiteConfiguration={
             'ErrorDocument': {
                 'Key': 'error.html'
@@ -85,11 +90,9 @@ class BucketManager:
                 'ContentType': content_type
             })
 
-
     def sync(self, pathname, bucket_name):
-        """Sync files to the S3 bucket"""
+        """Sync files to the S3 bucket."""
         bucket = self.s3.Bucket(bucket_name)
-
         root = Path(pathname).expanduser().resolve()
 
         def handle_directory(target):
