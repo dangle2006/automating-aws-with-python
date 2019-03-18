@@ -11,7 +11,6 @@ from bucket import BucketManager
 session = None
 bucket_manager = None
 
-
 @click.group()
 @click.option('--profile', default=None, help="Use a given AWS profile")
 def cli(profile):

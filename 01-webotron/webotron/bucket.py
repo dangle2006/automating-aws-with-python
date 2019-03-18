@@ -7,6 +7,8 @@ import mimetypes
 
 from botocore.exceptions import ClientError
 
+import util
+
 
 class BucketManager:
     """Manage an S3 Bucket."""
@@ -15,6 +17,19 @@ class BucketManager:
         """Create a BucketManager object."""
         self.session = session
         self.s3 = self.session.resource('s3')
+
+    get_region_name(self, bucket):
+        bucket_location = self.s3.meta.client.get_bucket_location(Bucket=bucket)
+
+        return bucket_location["LocationConstraint"] or 'us-east-1'
+
+
+    def get_bucket_url(self, bucket):
+        """Get the S3 website bucket URL."""
+        return "http://{}.{}".format(bucket.name,
+            util.get_endpoint())
+
+
 
     def all_buckets(self):
         """Get an iterator for all buckets."""
