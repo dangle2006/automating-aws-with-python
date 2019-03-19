@@ -1,7 +1,15 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
 
-"""Webotron - deploys static websites with AWS."""
+"""Webotron: Deploy websites with aws.
+Webotron automates the process of deploying static websites to AWS.
+- Configure AWS S3 buckets
+  - Create them
+  - Set them up for static website hosting
+  - Deploy local files to them
+- Configure DNS with AWS Route 53
+- Configure a Content Delivery Network and SSL with AWS CloudFront
+"""
 
 import boto3
 import click
@@ -11,16 +19,18 @@ from bucket import BucketManager
 session = None
 bucket_manager = None
 
+
 @click.group()
-@click.option('--profile', default=None, help="Use a given AWS profile")
+@click.option('--profile', default=None,
+              help="Use a given AWS profile.")
 def cli(profile):
     """Webotron deploys websites to AWS."""
     global session, bucket_manager
+
     session_cfg = {}
     if profile:
         session_cfg['profile_name'] = profile
 
-    print(session_cfg)
     session = boto3.Session(**session_cfg)
     bucket_manager = BucketManager(session)
 
@@ -28,7 +38,7 @@ def cli(profile):
 @cli.command('list-buckets')
 def list_buckets():
     """List all s3 buckets."""
-    for bucket in bucket_manager.s3.buckets.all():
+    for bucket in bucket_manager.all_buckets():
         print(bucket)
 
 
@@ -36,7 +46,7 @@ def list_buckets():
 @click.argument('bucket')
 def list_bucket_objects(bucket):
     """List objects in an s3 bucket."""
-    for obj in bucket_manager.s3.Bucket(bucket).objects.all():
+    for obj in bucket_manager.all_objects(bucket):
         print(obj)
 
 
@@ -48,6 +58,8 @@ def setup_bucket(bucket):
     bucket_manager.set_policy(s3_bucket)
     bucket_manager.configure_website(s3_bucket)
 
+    return
+
 
 @cli.command('sync')
 @click.argument('pathname', type=click.Path(exists=True))
@@ -55,6 +67,7 @@ def setup_bucket(bucket):
 def sync(pathname, bucket):
     """Sync contents of PATHNAME to BUCKET."""
     bucket_manager.sync(pathname, bucket)
+    print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucket)))
 
 
 if __name__ == '__main__':
