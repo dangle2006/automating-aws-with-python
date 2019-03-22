@@ -109,6 +109,8 @@ class BucketManager:
         for page in paginator.paginate(Bucket=bucket.name):
             for obj in page.get('Contents', []):
                 self.manifest[obj['Key']] = obj['ETag']
+        print("manifest -:", self.manifest)
+
 
     @staticmethod
     def hash_data(data):
@@ -167,7 +169,6 @@ class BucketManager:
         """Sync contents of path to bucket."""
         bucket = self.s3.Bucket(bucket_name)
         self.load_manifest(bucket)
-
         root = Path(pathname).expanduser().resolve()
 
         def handle_directory(target):

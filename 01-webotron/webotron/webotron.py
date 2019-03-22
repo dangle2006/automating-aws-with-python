@@ -52,6 +52,8 @@ def list_bucket_objects(bucket):
 
 @cli.command('setup-bucket')
 @click.argument('bucket')
+@click.option('--profile', default=None,
+              help="Use a given AWS profile.")
 def setup_bucket(bucket):
     """Create and configure S3 bucket."""
     s3_bucket = bucket_manager.init_bucket(bucket)
