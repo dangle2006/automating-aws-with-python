@@ -165,17 +165,49 @@ class BucketManager:
             Config=self.transfer_config
         )
 
-    def sync(self, pathname, bucket_name):
+    def sync(self, pathname, bucket_name, delete):
         """Sync contents of path to bucket."""
         bucket = self.s3.Bucket(bucket_name)
         self.load_manifest(bucket)
         root = Path(pathname).expanduser().resolve()
+        source_files = []
+        dest_files = []
+
+        source_dir_abs = Path(pathname).expanduser().resolve()
+
+        for obj in bucket.objects.all():
+            dest_files.append(obj.key)
+            print("A dest_file", obj.key)
 
         def handle_directory(target):
             for p in target.iterdir():
                 if p.is_dir():
                     handle_directory(p)
                 if p.is_file():
+                    file_string = str(p.relative_to(root))
+                    source_files.append(file_string)
                     self.upload_file(bucket, str(p), str(p.relative_to(root)))
 
         handle_directory(root)
+
+        print("Source files - ", source_files)
+        print("Dest files - ", dest_files)
+
+        def delete_file(s3, bucket_name, file_string):
+            obj = s3.Object(bucket_name, file_string)
+            obj.delete()
+
+        if delete:
+            files_to_delete = []
+            print("\n","Dest files ....", dest_files)
+            x = len(dest_files) - 1
+            while x+1  > 0 :
+                if dest_files[x] in source_files:
+                    print('\x1b[6;30;42m' + "File {} exists".format(dest_files[x]) + '\x1b[0m')
+                else:
+                    print("File {} doesn't exist on source".format(dest_files[x]))
+                    files_to_delete.append(dest_files[x])
+                x -= 1
+            for f in files_to_delete:
+                delete_file(self.session.resource('s3'), bucket_name, f)
+                print("Deleting .... ", f)

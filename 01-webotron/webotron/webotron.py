@@ -66,9 +66,10 @@ def setup_bucket(bucket):
 @cli.command('sync')
 @click.argument('pathname', type=click.Path(exists=True))
 @click.argument('bucket')
-def sync(pathname, bucket):
+@click.option('--delete', is_flag=True, help='Delete files that arent in the source.')
+def sync(pathname, bucket, delete):
     """Sync contents of PATHNAME to BUCKET."""
-    bucket_manager.sync(pathname, bucket)
+    bucket_manager.sync(pathname, bucket, delete)
     print(bucket_manager.get_bucket_url(bucket_manager.s3.Bucket(bucket)))
 
 

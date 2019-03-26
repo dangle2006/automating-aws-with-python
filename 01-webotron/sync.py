@@ -25,8 +25,9 @@ source_files = []
 
 def sync(pathname, bucket_name, profile, delete):
     """Sync contents of PATHNAME to BUCKET."""
-
-    global session
+    if delete:
+        print("--delete SELECTED")
+        global session
 
     session_cfg = {}
     if profile:
