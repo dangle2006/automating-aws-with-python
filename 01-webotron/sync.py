@@ -13,7 +13,7 @@ session = None
 bucket_manager = None
 
 CHUNK_SIZE = 8388608
-files = []
+source_files = []
 
 
 @click.command()
@@ -21,7 +21,9 @@ files = []
 @click.argument('bucket_name')
 @click.option('--profile', default=None,
               help="Use a given AWS profile.")
-def sync(pathname, bucket_name, profile):
+@click.option('--delete', is_flag=True, help='Delete files that arent in the source.')
+
+def sync(pathname, bucket_name, profile, delete):
     """Sync contents of PATHNAME to BUCKET."""
 
     global session
@@ -38,15 +40,12 @@ def sync(pathname, bucket_name, profile):
     )
     manifest = {}
 
-    print("Transfer Config - ", transfer_config)
-
     print("Contents of the bucket .. {} .. are as follows -".format(bucket_name))
-
     bucket = s3.Bucket(bucket_name)
-
+    dest_files = []
     for obj in bucket.objects.all():
-        print(obj)
-
+        dest_files.append(obj.key)
+        print("A dest_file", obj.key)
 
     ## load_manifest(bucket)
     """Load manifest for caching purposes."""
@@ -54,33 +53,46 @@ def sync(pathname, bucket_name, profile):
     for page in paginator.paginate(Bucket=bucket.name):
         for obj in page.get('Contents', []):
             manifest[obj['Key']] = obj['ETag']
-    print("manifest -:", manifest)
-
 
     root = Path(pathname).expanduser().resolve()
-    global source_dir_abs
+
     source_dir_abs = Path(pathname).expanduser().resolve()
-    print("Root  is ... {}".format(root))
-    handle_directory(root)
+    handle_directory(root, source_dir_abs)
 
-    print("Files list in source ", files)
+    if delete:
+        files_to_delete = []
+        print("\n","Dest files ....", dest_files)
+        x = len(dest_files) - 1
+        while x+1  > 0 :
+            if dest_files[x] in source_files:
+                print('\x1b[6;30;42m' + "File {} exists".format(dest_files[x]) + '\x1b[0m')
+            else:
+                print("File {} doesn't exist on source".format(dest_files[x]))
+                files_to_delete.append(dest_files[x])
+            x -= 1
 
-    
+        for f in files_to_delete:
+            delete_file(s3, bucket_name, f)
+            print("Deleting .... ", f)
+
+    for file in source_files:
+        upload_file(bucket, file)
 
 
-
-
-def handle_directory(root):
+def handle_directory(root, source_dir_abs):
     for p in root.iterdir():
         if p.is_dir():
-            print("Directory is ", p)
-            handle_directory(p)
+            handle_directory(p, source_dir_abs)
         if p.is_file():
             file_string = str(p.relative_to(source_dir_abs))
-            files.append(file_string)
-            print("Adding ... ", file_string)
-            # upload_file(bucket, str(p), str(p.relative_to(root)))
+            source_files.append(file_string)
 
+def delete_file(s3, bucket_name, file_string):
+    obj = s3.Object(bucket_name, file_string)
+    obj.delete()
+
+def upload_file(bucket_name, file):
+    print("Uploading ...", file)
 
 def get_region_name(bucket):
     """Get the bucket's region name."""
@@ -91,7 +103,7 @@ def get_region_name(bucket):
 
 
 if __name__ == '__main__':
-    print({})
+    # print({})
     sync()
 
 
